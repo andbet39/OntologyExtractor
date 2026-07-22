@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+.env
+.DS_Store
+.docusaurus/
+report/
+playwright-report/
+test-results/
+packages/docs/build/
+packages/docs/.docusaurus/
+*.tgz

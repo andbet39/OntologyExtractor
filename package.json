@@ -1,0 +1,24 @@
+{
+  "name": "ontology-extractor-workspace",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm --filter ontology-extractor build && pnpm --filter ontology-report build",
+    "test": "pnpm --recursive test",
+    "test:e2e": "pnpm --filter ontology-report build && pnpm --filter ontology-report test:e2e",
+    "typecheck": "pnpm --filter ontology-extractor typecheck && pnpm --filter ontology-extractor build && pnpm --filter ontology-report typecheck"
+  },
+  "pnpm": {
+    "overrides": {
+      "webpack": "5.101.3"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

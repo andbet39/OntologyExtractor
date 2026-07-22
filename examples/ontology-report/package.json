@@ -1,0 +1,30 @@
+{
+  "name": "ontology-report",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && esbuild src/report-client.ts --bundle --format=iife --target=es2022 --minify --outfile=dist/report-client.js && esbuild src/web-client.ts --bundle --format=esm --target=es2022 --minify --outfile=dist/web-client.js",
+    "test": "vitest run test",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/cli.js",
+    "start:web": "node --env-file-if-exists=.env dist/server.js"
+  },
+  "dependencies": {
+    "@antv/g6": "^5.1.1",
+    "@fastify/multipart": "^10.1.0",
+    "@langchain/core": "1.2.3",
+    "@langchain/openai": "1.5.5",
+    "cytoscape": "^3.34.0",
+    "fastify": "^5.10.0",
+    "ontology-extractor": "workspace:*"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1",
+    "@types/pngjs": "^6.0.5",
+    "esbuild": "^0.28.1",
+    "pngjs": "^7.0.0"
+  }
+}

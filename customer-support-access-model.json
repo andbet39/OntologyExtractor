@@ -1,0 +1,737 @@
+{
+  "version": 1,
+  "ontology": {
+    "name": "customer-support-access-model",
+    "namespace": "customer-support",
+    "description": "Sample ontology for customer support, billing, and subscription access control.",
+    "status": "ACTIVE"
+  },
+  "categories": [
+    {
+      "ref": "customer-data",
+      "name": "Customer Data"
+    },
+    {
+      "ref": "support-operations",
+      "name": "Support Operations"
+    },
+    {
+      "ref": "commercial-data",
+      "name": "Commercial Data"
+    }
+  ],
+  "variables": [
+    {
+      "ref": "classification-level",
+      "name": "CLASSIFICATION_LEVEL",
+      "type": "NUMBER"
+    }
+  ],
+  "entities": [
+    {
+      "ref": "customer",
+      "name": "Customer",
+      "status": "ACTIVE",
+      "definition": {
+        "type": "Customer",
+        "attributes": [
+          {
+            "id": "11111111-1111-4111-8111-111111111101",
+            "name": "customerId",
+            "type": "STRING",
+            "label": "Customer ID",
+            "indexed": true,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "11111111-1111-4111-8111-111111111102",
+            "name": "displayName",
+            "type": "STRING",
+            "label": "Display name",
+            "indexed": false,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "11111111-1111-4111-8111-111111111103",
+            "name": "email",
+            "type": "STRING",
+            "label": "Email",
+            "indexed": false,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "11111111-1111-4111-8111-111111111104",
+            "name": "region",
+            "type": "STRING",
+            "label": "Region",
+            "indexed": true,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "11111111-1111-4111-8111-111111111105",
+            "name": "status",
+            "type": "STRING",
+            "label": "Status",
+            "indexed": true,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "11111111-1111-4111-8111-111111111106",
+            "name": "riskScore",
+            "type": "FLOAT",
+            "label": "Risk score",
+            "indexed": false,
+            "required": false,
+            "restricted": false
+          }
+        ],
+        "description": "A customer account that can own subscriptions and open support tickets.",
+        "pkAttribute": "customerId",
+        "labelAttribute": "displayName",
+        "categoryRef": "customer-data"
+      }
+    },
+    {
+      "ref": "supportticket",
+      "name": "SupportTicket",
+      "status": "ACTIVE",
+      "definition": {
+        "type": "SupportTicket",
+        "visual": {
+          "icon": "o_person",
+          "backColor": "#DBEAFE",
+          "textColor": "#1E40AF"
+        },
+        "attributes": [
+          {
+            "id": "22222222-2222-4222-8222-222222222201",
+            "name": "ticketId",
+            "type": "STRING",
+            "label": "Ticket ID",
+            "status": "ACTIVE",
+            "weight": 1,
+            "indexed": true,
+            "required": true,
+            "restricted": false,
+            "description": ""
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222202",
+            "name": "subject",
+            "type": "STRING",
+            "label": "Subject",
+            "status": "ACTIVE",
+            "weight": 1,
+            "indexed": false,
+            "required": true,
+            "restricted": false,
+            "description": ""
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222203",
+            "name": "priority",
+            "type": "STRING",
+            "label": "Priority",
+            "status": "ACTIVE",
+            "weight": 1,
+            "indexed": true,
+            "required": true,
+            "restricted": false,
+            "description": ""
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222204",
+            "name": "status",
+            "type": "STRING",
+            "label": "Status",
+            "status": "ACTIVE",
+            "weight": 1,
+            "indexed": true,
+            "required": true,
+            "restricted": false,
+            "description": ""
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222205",
+            "name": "createdAt",
+            "type": "DATE",
+            "label": "Created at",
+            "status": "ACTIVE",
+            "weight": 1,
+            "indexed": false,
+            "required": true,
+            "restricted": false,
+            "description": ""
+          },
+          {
+            "id": "22222222-2222-4222-8222-222222222206",
+            "name": "region",
+            "type": "STRING",
+            "label": "Region",
+            "status": "ACTIVE",
+            "weight": 1,
+            "indexed": true,
+            "required": true,
+            "restricted": false,
+            "description": ""
+          }
+        ],
+        "description": "A customer support case handled by support agents and managers.",
+        "pkAttribute": "ticketId",
+        "labelAttribute": "subject",
+        "categoryRef": "support-operations"
+      }
+    },
+    {
+      "ref": "subscription",
+      "name": "Subscription",
+      "status": "ACTIVE",
+      "definition": {
+        "type": "Subscription",
+        "attributes": [
+          {
+            "id": "33333333-3333-4333-8333-333333333301",
+            "name": "subscriptionId",
+            "type": "STRING",
+            "label": "Subscription ID",
+            "indexed": true,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "33333333-3333-4333-8333-333333333302",
+            "name": "planName",
+            "type": "STRING",
+            "label": "Plan name",
+            "indexed": false,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "33333333-3333-4333-8333-333333333303",
+            "name": "billingStatus",
+            "type": "STRING",
+            "label": "Billing status",
+            "indexed": true,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "33333333-3333-4333-8333-333333333304",
+            "name": "renewalDate",
+            "type": "DATE",
+            "label": "Renewal date",
+            "indexed": false,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "33333333-3333-4333-8333-333333333305",
+            "name": "annualValue",
+            "type": "FLOAT",
+            "label": "Annual value",
+            "indexed": false,
+            "required": false,
+            "restricted": true
+          }
+        ],
+        "description": "A commercial subscription associated with a customer account.",
+        "pkAttribute": "subscriptionId",
+        "labelAttribute": "planName",
+        "categoryRef": "commercial-data"
+      }
+    },
+    {
+      "ref": "agent",
+      "name": "Agent",
+      "status": "ACTIVE",
+      "definition": {
+        "type": "Agent",
+        "attributes": [
+          {
+            "id": "44444444-4444-4444-8444-444444444401",
+            "name": "agentId",
+            "type": "STRING",
+            "label": "Agent ID",
+            "indexed": true,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "44444444-4444-4444-8444-444444444402",
+            "name": "fullName",
+            "type": "STRING",
+            "label": "Full name",
+            "indexed": false,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "44444444-4444-4444-8444-444444444403",
+            "name": "email",
+            "type": "STRING",
+            "label": "Email",
+            "indexed": false,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "44444444-4444-4444-8444-444444444404",
+            "name": "department",
+            "type": "STRING",
+            "label": "Department",
+            "indexed": true,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "44444444-4444-4444-8444-444444444405",
+            "name": "region",
+            "type": "STRING",
+            "label": "Region",
+            "indexed": true,
+            "required": true,
+            "restricted": false
+          }
+        ],
+        "description": "A support or billing employee assigned to customer-facing work.",
+        "pkAttribute": "agentId",
+        "labelAttribute": "fullName",
+        "categoryRef": "support-operations"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "ref": "has-ticket",
+      "name": "HAS_TICKET",
+      "status": "ACTIVE",
+      "fromEntityRef": "customer",
+      "toEntityRef": "supportticket",
+      "definition": {
+        "visual": {
+          "icon": "o_link",
+          "backColor": "#EFF6FF",
+          "textColor": "#1E40AF"
+        },
+        "attributes": [
+          {
+            "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01",
+            "name": "openedAt",
+            "type": "DATE",
+            "label": "Opened at",
+            "status": "ACTIVE",
+            "weight": 1,
+            "indexed": false,
+            "required": true,
+            "restricted": false,
+            "description": ""
+          },
+          {
+            "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02",
+            "name": "channel",
+            "type": "STRING",
+            "label": "Channel",
+            "status": "ACTIVE",
+            "weight": 1,
+            "indexed": false,
+            "required": false,
+            "restricted": false,
+            "description": ""
+          }
+        ],
+        "cardinality": "1 : N",
+        "description": "A customer can open one or more support tickets.",
+        "toCardinality": "N",
+        "fromCardinality": "1"
+      }
+    },
+    {
+      "ref": "owns-subscription",
+      "name": "OWNS_SUBSCRIPTION",
+      "status": "ACTIVE",
+      "fromEntityRef": "customer",
+      "toEntityRef": "subscription",
+      "definition": {
+        "attributes": [
+          {
+            "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb01",
+            "name": "startedAt",
+            "type": "DATE",
+            "label": "Started at",
+            "indexed": false,
+            "required": true,
+            "restricted": false
+          }
+        ],
+        "cardinality": "1 : N",
+        "description": "A customer owns one or more commercial subscriptions.",
+        "toCardinality": "N",
+        "fromCardinality": "1"
+      }
+    },
+    {
+      "ref": "handles-ticket",
+      "name": "HANDLES_TICKET",
+      "status": "ACTIVE",
+      "fromEntityRef": "agent",
+      "toEntityRef": "supportticket",
+      "definition": {
+        "attributes": [
+          {
+            "id": "cccccccc-cccc-4ccc-8ccc-cccccccccc01",
+            "name": "assignedAt",
+            "type": "DATETIME",
+            "label": "Assigned at",
+            "indexed": false,
+            "required": true,
+            "restricted": false
+          },
+          {
+            "id": "cccccccc-cccc-4ccc-8ccc-cccccccccc02",
+            "name": "assignmentReason",
+            "type": "STRING",
+            "label": "Assignment reason",
+            "indexed": false,
+            "required": false,
+            "restricted": false
+          }
+        ],
+        "cardinality": "1 : N",
+        "description": "An agent can handle one or more support tickets.",
+        "toCardinality": "N",
+        "fromCardinality": "1"
+      }
+    }
+  ],
+  "userGroups": [
+    {
+      "ref": "magma-graphdb",
+      "name": "MAGMA GraphDB"
+    }
+  ],
+  "securityProfiles": [
+    {
+      "ref": "support-operations-access",
+      "name": "Support Operations Access",
+      "status": "ACTIVE",
+      "standardBehavior": "DENY",
+      "userGroupRefs": [
+        "magma-graphdb"
+      ]
+    },
+    {
+      "ref": "billing-operations-access",
+      "name": "Billing Operations Access",
+      "status": "ACTIVE",
+      "standardBehavior": "DENY",
+      "userGroupRefs": []
+    },
+    {
+      "ref": "default-read-only",
+      "name": "Default Read Only",
+      "status": "ACTIVE",
+      "standardBehavior": "DENY",
+      "userGroupRefs": []
+    }
+  ],
+  "policies": [
+    {
+      "name": "Support can read regional customers",
+      "status": "ACTIVE",
+      "order": 1,
+      "securityProfileRef": "support-operations-access",
+      "policyType": "ENTITY_LEVEL",
+      "effect": "GRANT",
+      "actions": [
+        "READ"
+      ],
+      "definition": {
+        "target": {
+          "type": "ENTITY",
+          "ref": "customer"
+        },
+        "conditions": {
+          "mode": "CNF",
+          "groups": [
+            {
+              "conditions": [
+                {
+                  "left": {
+                    "key": "department",
+                    "source": "USER"
+                  },
+                  "right": {
+                    "value": "Support",
+                    "source": "STATIC",
+                    "valueType": "STRING"
+                  },
+                  "operator": "EQ"
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "left": {
+                    "key": "location",
+                    "source": "USER"
+                  },
+                  "right": {
+                    "value": "EMEA",
+                    "source": "STATIC",
+                    "valueType": "STRING"
+                  },
+                  "operator": "EQ"
+                },
+                {
+                  "left": {
+                    "key": "location",
+                    "source": "USER"
+                  },
+                  "right": {
+                    "value": "NA",
+                    "source": "STATIC",
+                    "valueType": "STRING"
+                  },
+                  "operator": "EQ"
+                }
+              ]
+            }
+          ]
+        },
+        "description": "Support users can read customers when their user profile is in a supported location."
+      }
+    },
+    {
+      "name": "Support can manage tickets",
+      "status": "ACTIVE",
+      "order": 2,
+      "securityProfileRef": "support-operations-access",
+      "policyType": "ENTITY_LEVEL",
+      "effect": "GRANT",
+      "actions": [
+        "CREATE",
+        "READ",
+        "UPDATE"
+      ],
+      "definition": {
+        "target": {
+          "type": "ENTITY",
+          "ref": "supportticket"
+        },
+        "conditions": {
+          "mode": "CNF",
+          "groups": [
+            {
+              "conditions": [
+                {
+                  "left": {
+                    "key": "department",
+                    "source": "USER"
+                  },
+                  "right": {
+                    "value": "Support",
+                    "source": "STATIC",
+                    "valueType": "STRING"
+                  },
+                  "operator": "EQ"
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "left": {
+                    "key": "external",
+                    "source": "USER"
+                  },
+                  "right": {
+                    "value": false,
+                    "source": "STATIC",
+                    "valueType": "BOOLEAN"
+                  },
+                  "operator": "EQ"
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "left": {
+                    "key": "location",
+                    "source": "USER"
+                  },
+                  "right": {
+                    "value": "EMEA",
+                    "source": "STATIC",
+                    "valueType": "STRING"
+                  },
+                  "operator": "EQ"
+                },
+                {
+                  "left": {
+                    "key": "location",
+                    "source": "USER"
+                  },
+                  "right": {
+                    "value": "NA",
+                    "source": "STATIC",
+                    "valueType": "STRING"
+                  },
+                  "operator": "EQ"
+                }
+              ]
+            }
+          ]
+        },
+        "description": "Support users can create, read, and update tickets when their user profile is in a supported location."
+      }
+    },
+    {
+      "name": "Support customer visible fields",
+      "status": "ACTIVE",
+      "order": 3,
+      "securityProfileRef": "support-operations-access",
+      "policyType": "ATTRIBUTE_LEVEL",
+      "effect": "GRANT",
+      "actions": [
+        "READ"
+      ],
+      "definition": {
+        "target": {
+          "type": "ATTRIBUTE",
+          "parent": {
+            "type": "ENTITY",
+            "ref": "customer"
+          },
+          "attributes": [
+            "11111111-1111-4111-8111-111111111101",
+            "11111111-1111-4111-8111-111111111102",
+            "11111111-1111-4111-8111-111111111103",
+            "11111111-1111-4111-8111-111111111104",
+            "11111111-1111-4111-8111-111111111105"
+          ]
+        },
+        "description": "Support users can read non-sensitive customer fields.",
+        "allowedAttributes": [
+          "11111111-1111-4111-8111-111111111101",
+          "11111111-1111-4111-8111-111111111102",
+          "11111111-1111-4111-8111-111111111103",
+          "11111111-1111-4111-8111-111111111104",
+          "11111111-1111-4111-8111-111111111105"
+        ]
+      }
+    },
+    {
+      "name": "Billing can read subscription financials",
+      "status": "ACTIVE",
+      "order": 4,
+      "securityProfileRef": "billing-operations-access",
+      "policyType": "ATTRIBUTE_LEVEL",
+      "effect": "GRANT",
+      "actions": [
+        "READ"
+      ],
+      "definition": {
+        "target": {
+          "type": "ATTRIBUTE",
+          "parent": {
+            "type": "ENTITY",
+            "ref": "subscription"
+          },
+          "attributes": [
+            "33333333-3333-4333-8333-333333333301",
+            "33333333-3333-4333-8333-333333333302",
+            "33333333-3333-4333-8333-333333333303",
+            "33333333-3333-4333-8333-333333333304",
+            "33333333-3333-4333-8333-333333333305"
+          ]
+        },
+        "description": "Billing managers can inspect subscription financial and renewal data.",
+        "allowedAttributes": [
+          "33333333-3333-4333-8333-333333333301",
+          "33333333-3333-4333-8333-333333333302",
+          "33333333-3333-4333-8333-333333333303",
+          "33333333-3333-4333-8333-333333333304",
+          "33333333-3333-4333-8333-333333333305"
+        ]
+      }
+    },
+    {
+      "name": "Billing can update subscriptions",
+      "status": "ACTIVE",
+      "order": 5,
+      "securityProfileRef": "billing-operations-access",
+      "policyType": "ENTITY_LEVEL",
+      "effect": "GRANT",
+      "actions": [
+        "READ",
+        "UPDATE"
+      ],
+      "definition": {
+        "target": {
+          "type": "ENTITY",
+          "ref": "subscription"
+        },
+        "description": "Billing managers can read and update subscription records."
+      }
+    },
+    {
+      "name": "Support can traverse customer tickets",
+      "status": "ACTIVE",
+      "order": 6,
+      "securityProfileRef": "support-operations-access",
+      "policyType": "RELATIONSHIP_LEVEL",
+      "effect": "GRANT",
+      "actions": [
+        "TRAVERSE"
+      ],
+      "definition": {
+        "target": {
+          "type": "RELATIONSHIP",
+          "ref": "has-ticket"
+        },
+        "description": "Support users can follow customer-to-ticket relationships."
+      }
+    },
+    {
+      "name": "Default profile can read agent directory",
+      "status": "ACTIVE",
+      "order": 7,
+      "securityProfileRef": "default-read-only",
+      "policyType": "ATTRIBUTE_LEVEL",
+      "effect": "GRANT",
+      "actions": [
+        "READ"
+      ],
+      "definition": {
+        "target": {
+          "type": "ATTRIBUTE",
+          "parent": {
+            "type": "ENTITY",
+            "ref": "agent"
+          },
+          "attributes": [
+            "44444444-4444-4444-8444-444444444401",
+            "44444444-4444-4444-8444-444444444402",
+            "44444444-4444-4444-8444-444444444404",
+            "44444444-4444-4444-8444-444444444405"
+          ]
+        },
+        "description": "A basic read-only profile can see public agent directory fields.",
+        "allowedAttributes": [
+          "44444444-4444-4444-8444-444444444401",
+          "44444444-4444-4444-8444-444444444402",
+          "44444444-4444-4444-8444-444444444404",
+          "44444444-4444-4444-8444-444444444405"
+        ]
+      }
+    }
+  ]
+}
