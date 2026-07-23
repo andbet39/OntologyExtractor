@@ -1,0 +1,112 @@
+import {
+  AzureChatOpenAI,
+  AzureOpenAIEmbeddings,
+  ChatOpenAI,
+  OpenAIEmbeddings,
+} from "@langchain/openai";
+import type { EmbeddingAdapter, LlmAdapter } from "ontology-extractor";
+import { LangChainEmbeddingAdapter, LangChainLlmAdapter } from "ontology-extractor/langchain";
+
+import { DemoEmbeddingAdapter, DemoLlmAdapter } from "./mock-adapters";
+
+export type ProviderName = "mock" | "lmstudio" | "azure";
+
+export interface ProviderAdapters {
+  llm: LlmAdapter;
+  embeddings: EmbeddingAdapter;
+  summary: { provider: ProviderName; chatModel: string; embeddingModel: string };
+}
+
+export function createProviderAdapters(
+  provider: ProviderName,
+  environment: NodeJS.ProcessEnv = process.env,
+): ProviderAdapters {
+  if (provider === "mock") {
+    return {
+      llm: new DemoLlmAdapter(),
+      embeddings: new DemoEmbeddingAdapter(),
+      summary: { provider, chatModel: "deterministic-demo", embeddingModel: "trigram-hash-32" },
+    };
+  }
+  return provider === "lmstudio" ? createLmStudioAdapters(environment) : createAzureAdapters(environment);
+}
+
+function createLmStudioAdapters(environment: NodeJS.ProcessEnv): ProviderAdapters {
+  const chatModel = requireEnvironment(environment, "LMSTUDIO_CHAT_MODEL");
+  const embeddingModel = requireEnvironment(environment, "LMSTUDIO_EMBEDDING_MODEL");
+  const dimensions = readDimensions(environment);
+  const baseURL = environment.LMSTUDIO_BASE_URL?.trim() || "http://localhost:1234/v1";
+  const apiKey = environment.LMSTUDIO_API_KEY?.trim() || "lm-studio";
+  const chat = new ChatOpenAI({ model: chatModel, apiKey, temperature: 0, maxRetries: 2, configuration: { baseURL } });
+  const embeddings = new OpenAIEmbeddings({ model: embeddingModel, apiKey, maxRetries: 2, configuration: { baseURL } });
+  return {
+    llm: new LangChainLlmAdapter(chat, { structuredOutputMethod: "jsonMode" }),
+    embeddings: new LangChainEmbeddingAdapter(embeddings, dimensions),
+    summary: { provider: "lmstudio", chatModel, embeddingModel },
+  };
+}
+
+function createAzureAdapters(environment: NodeJS.ProcessEnv): ProviderAdapters {
+  const apiKey = requireEnvironment(environment, "AZURE_OPENAI_API_KEY");
+  const endpoint = requireEnvironment(environment, "AZURE_OPENAI_ENDPOINT");
+  const instanceName = readAzureInstanceName(endpoint);
+  const apiVersion = environment.AZURE_OPENAI_API_VERSION?.trim() || "2024-10-21";
+  const chatModel = requireEnvironment(environment, "AZURE_OPENAI_CHAT_DEPLOYMENT");
+  const embeddingModel = requireEnvironment(environment, "AZURE_OPENAI_EMBEDDING_DEPLOYMENT");
+  const dimensions = readDimensions(environment);
+  const chat = new AzureChatOpenAI({
+    azureOpenAIApiKey: apiKey,
+    azureOpenAIEndpoint: endpoint,
+    azureOpenAIApiVersion: apiVersion,
+    azureOpenAIApiDeploymentName: chatModel,
+    maxRetries: 2,
+  });
+  const embeddings = new AzureOpenAIEmbeddings({
+    azureOpenAIApiKey: apiKey,
+    azureOpenAIApiInstanceName: instanceName,
+    azureOpenAIApiVersion: apiVersion,
+    azureOpenAIApiDeploymentName: embeddingModel,
+    dimensions,
+    maxRetries: 2,
+  });
+  return {
+    llm: new LangChainLlmAdapter(chat),
+    embeddings: new LangChainEmbeddingAdapter(embeddings, dimensions),
+    summary: { provider: "azure", chatModel, embeddingModel },
+  };
+}
+
+function readAzureInstanceName(endpoint: string): string {
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    throw new Error("AZURE_OPENAI_ENDPOINT must be a valid HTTPS URL");
+  }
+  const suffix = ".openai.azure.com";
+  if (url.protocol !== "https:" || !url.hostname.endsWith(suffix)) {
+    throw new Error("AZURE_OPENAI_ENDPOINT must use https://<resource>.openai.azure.com");
+  }
+  const instanceName = url.hostname.slice(0, -suffix.length);
+  if (!/^[a-z0-9][a-z0-9-]{1,62}$/i.test(instanceName)) {
+    throw new Error("AZURE_OPENAI_ENDPOINT contains an invalid resource name");
+  }
+  return instanceName;
+}
+
+function requireEnvironment(environment: NodeJS.ProcessEnv, name: string): string {
+  const value = environment[name]?.trim();
+  if (value === undefined || value.length === 0) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
+function readDimensions(environment: NodeJS.ProcessEnv): number {
+  const rawValue = requireEnvironment(environment, "ONTOLOGY_EMBEDDING_DIMENSIONS");
+  const dimensions = Number(rawValue);
+  if (!Number.isInteger(dimensions) || dimensions <= 0) {
+    throw new Error("ONTOLOGY_EMBEDDING_DIMENSIONS must be a positive integer");
+  }
+  return dimensions;
+}

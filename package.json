@@ -6,6 +6,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "dev:studio": "pnpm --filter ontology-extractor build && pnpm --filter ontology-studio dev",
     "build": "pnpm --filter ontology-extractor build && pnpm --filter ontology-report build",
     "test": "pnpm --recursive test",
     "test:e2e": "pnpm --filter ontology-report build && pnpm --filter ontology-report test:e2e",
