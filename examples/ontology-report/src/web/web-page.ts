@@ -32,13 +32,30 @@ export function renderWebPage(): string {
     button:focus-visible, input:focus-visible, [role=tab]:focus-visible { outline:3px solid var(--coral); outline-offset:2px; }
     .files { list-style:none; padding:0; margin:16px 0; display:grid; gap:8px; }
     .files li { display:flex; justify-content:space-between; gap:8px; padding:9px 0; border-bottom:1px solid var(--line); overflow-wrap:anywhere; }
+    .settings { margin-top:22px; border-top:1px solid var(--line); padding-top:18px; }
+    .settings summary { cursor:pointer; font-weight:700; }
+    .settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+    .field { display:grid; gap:5px; min-width:0; }
+    .field.full { grid-column:1/-1; }
+    label, .field span { font-weight:700; }
+    input[type=number], select, textarea { width:100%; border:1px solid var(--line); border-radius:4px; padding:8px; background:#fff; color:var(--ink); font:1rem Georgia,serif; }
+    textarea { min-height:104px; resize:vertical; font:13px/1.45 ui-monospace,monospace; }
+    .check { display:flex; align-items:center; gap:8px; font-weight:700; }
+    .prompt-actions { display:flex; flex-wrap:wrap; gap:8px; }
+    .prompt-actions button { min-height:34px; padding:6px 10px; font-size:.9rem; }
     .status { min-height:64px; padding:14px; border-left:4px solid var(--teal); background:#edf5f3; }
     .progress { width:100%; accent-color:var(--teal); }
     .tabs { display:flex; gap:4px; margin:24px 0 0; border-bottom:1px solid var(--line); }
     [role=tab] { border:0; border-bottom:3px solid transparent; border-radius:0; }
     [role=tab][aria-selected=true] { color:var(--teal); border-bottom-color:var(--teal); }
     [role=tabpanel][hidden] { display:none; }
-    #ontology-graph { height:500px; min-height:420px; border:1px solid var(--line); }
+    .graph-shell { display:grid; grid-template-columns:minmax(0,1fr) 260px; border:1px solid var(--line); }
+    #ontology-graph { height:500px; min-height:420px; min-width:0; }
+    #graph-details { border-left:1px solid var(--line); padding:16px; background:#fff; overflow-wrap:anywhere; }
+    #graph-details h3 { margin-top:0; }
+    #graph-details dl { display:grid; gap:8px; margin:0; }
+    #graph-details dt { font-weight:700; }
+    #graph-details dd { margin:0 0 8px; }
     .type-table { width:100%; table-layout:fixed; border-collapse:collapse; margin-top:18px; font-size:.9rem; }
     .type-table th, .type-table td { padding:9px; border:1px solid var(--line); text-align:left; vertical-align:top; overflow-wrap:anywhere; }
     .type-table th { background:#edf5f3; }
@@ -46,7 +63,7 @@ export function renderWebPage(): string {
     .empty { display:grid; place-items:center; min-height:440px; text-align:center; color:#666; }
     .actions { display:flex; justify-content:space-between; gap:12px; margin:12px 0; }
     .error { border-color:var(--coral); background:#fff0ec; }
-    @media (max-width:760px) { .workspace { grid-template-columns:1fr; } .input-panel { border-right:0; border-bottom:1px solid var(--line); } main { width:min(100% - 20px,1180px); margin-top:12px; } #ontology-graph { height:440px; } }
+    @media (max-width:760px) { .workspace { grid-template-columns:1fr; } .input-panel { border-right:0; border-bottom:1px solid var(--line); } .settings-grid { grid-template-columns:1fr; } main { width:min(100% - 20px,1180px); margin-top:12px; } .graph-shell { grid-template-columns:1fr; } #ontology-graph { height:440px; } #graph-details { border-left:0; border-top:1px solid var(--line); } }
   </style>
 </head>
 <body>
@@ -55,12 +72,32 @@ export function renderWebPage(): string {
     <div class="workspace">
       <section class="input-panel" aria-labelledby="upload-title">
         <h2 id="upload-title">Documents</h2>
-        <p class="muted">Upload TXT, Markdown, or HTML files to extract a draft TBox.</p>
+        <p class="muted">Upload TXT, Markdown, HTML, or PDF files to extract a draft TBox.</p>
         <div id="drop-zone" class="drop-zone">
           <label for="documents"><strong>Choose documents</strong><br><span class="muted">or drop them here</span></label>
-          <input id="documents" type="file" multiple accept=".txt,.md,.markdown,.html,.htm,text/plain,text/markdown,text/html">
+          <input id="documents" type="file" multiple accept=".txt,.md,.markdown,.html,.htm,.pdf,text/plain,text/markdown,text/html,application/pdf">
         </div>
         <ul id="file-list" class="files" aria-label="Selected documents"></ul>
+        <details class="settings">
+          <summary>Extractor settings</summary>
+          <div class="settings-grid">
+            <label class="field" for="chunking-strategy">Chunk strategy<select id="chunking-strategy" class="setting-control"><option value="recursive">Recursive</option><option value="markdown">Markdown</option><option value="html">HTML</option></select></label>
+            <label class="field" for="extraction-accuracy">Accuracy<select id="extraction-accuracy" class="setting-control"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label>
+            <label class="field" for="chunk-size">Chunk size<input id="chunk-size" class="setting-control" type="number" min="1" max="100000" step="1" inputmode="numeric"></label>
+            <label class="field" for="chunk-overlap">Chunk overlap<input id="chunk-overlap" class="setting-control" type="number" min="0" max="99999" step="1" inputmode="numeric"></label>
+            <label class="field" for="extraction-concurrency">Extraction concurrency<input id="extraction-concurrency" class="setting-control" type="number" min="1" max="64" step="1" inputmode="numeric"></label>
+            <label class="field" for="support-count-threshold">Support threshold<input id="support-count-threshold" class="setting-control" type="number" min="1" max="1000" step="1" inputmode="numeric"></label>
+            <label class="field" for="top-k">Canonical top K<input id="top-k" class="setting-control" type="number" min="1" max="50" step="1" inputmode="numeric"></label>
+            <label class="field" for="auto-new-threshold">Auto new threshold<input id="auto-new-threshold" class="setting-control" type="number" min="0" max="1" step="0.01" inputmode="decimal"></label>
+            <label class="field" for="auto-match-threshold">Auto match threshold<input id="auto-match-threshold" class="setting-control" type="number" min="0" max="1" step="0.01" inputmode="decimal"></label>
+            <label class="check"><input id="require-examples" class="setting-control" type="checkbox">Require examples</label>
+            <label class="check"><input id="use-llm-for-ambiguous" class="setting-control" type="checkbox">Use LLM for ambiguous matches</label>
+            <div class="field full"><label for="extraction-system-prompt">Extraction system prompt override</label><textarea id="extraction-system-prompt" class="setting-control" maxlength="8000"></textarea><div class="prompt-actions"><button class="setting-control" type="button" data-prompt-target="extraction-system" data-prompt-example="extractionSystem">SOP example</button></div></div>
+            <div class="field full"><label for="extraction-prompt">Extraction prompt override</label><textarea id="extraction-prompt" class="setting-control" maxlength="8000"></textarea><div class="prompt-actions"><button class="setting-control" type="button" data-prompt-target="extraction-prompt" data-prompt-example="extractionPrompt">JSON example</button></div></div>
+            <div class="field full"><label for="canonicalization-system-prompt">Canonicalization system prompt override</label><textarea id="canonicalization-system-prompt" class="setting-control" maxlength="8000"></textarea><div class="prompt-actions"><button class="setting-control" type="button" data-prompt-target="canonicalization-system" data-prompt-example="canonicalizationSystem">GMP example</button></div></div>
+            <div class="field full"><label for="canonicalization-prompt">Canonicalization prompt override</label><textarea id="canonicalization-prompt" class="setting-control" maxlength="8000"></textarea><div class="prompt-actions"><button class="setting-control" type="button" data-prompt-target="canonicalization-prompt" data-prompt-example="canonicalizationPrompt">Verdict example</button></div></div>
+          </div>
+        </details>
         <button id="extract" class="primary" type="button" disabled>Extract ontology</button>
         <button id="cancel" type="button" hidden>Cancel extraction</button>
       </section>
@@ -74,7 +111,7 @@ export function renderWebPage(): string {
             <button id="graph-tab" role="tab" aria-selected="true" aria-controls="graph-panel">Graph</button>
             <button id="json-tab" role="tab" aria-selected="false" aria-controls="json-panel">JSON</button>
           </div>
-          <div id="graph-panel" role="tabpanel" aria-labelledby="graph-tab"><div id="ontology-graph" role="img" aria-label="Extracted ontology graph"></div><table class="type-table"><caption>Extracted canonical types</caption><thead><tr><th>Type</th><th>Kind</th><th>Definition</th><th>Support</th></tr></thead><tbody id="type-table-body"></tbody></table></div>
+          <div id="graph-panel" role="tabpanel" aria-labelledby="graph-tab"><div class="graph-shell"><div id="ontology-graph" role="img" aria-label="Extracted ontology graph"></div><aside id="graph-details" aria-live="polite"><h3>Selection details</h3><p>Select a type or relation in the graph.</p></aside></div><table class="type-table"><caption>Extracted canonical types</caption><thead><tr><th>Type</th><th>Kind</th><th>Definition</th><th>Attributes</th><th>References</th><th>Support</th></tr></thead><tbody id="type-table-body"></tbody></table></div>
           <div id="json-panel" role="tabpanel" aria-labelledby="json-tab" hidden><div class="actions"><span>Ontology JSON</span><button id="download" type="button">Download</button></div><pre id="json-output" tabindex="0"></pre></div>
         </div>
       </section>

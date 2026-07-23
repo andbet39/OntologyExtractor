@@ -51,6 +51,8 @@ describe("web application API", () => {
     expect(page.statusCode).toBe(200);
     expect(page.body).toContain("Ontology Workbench");
     expect(page.body).toContain("Download");
+    expect(page.body).toContain("Extractor settings");
+    expect(page.body).toContain("SOP example");
     expect(page.headers["content-security-policy"]).toContain("default-src 'self'");
     expect(page.headers["x-content-type-options"]).toBe("nosniff");
     expect(runtime.headers["cache-control"]).toBe("no-store");
@@ -60,6 +62,17 @@ describe("web application API", () => {
         maxFiles: 3,
         maxFileBytes: 2_048,
         maxTotalBytes: 4_096,
+      },
+      settings: {
+        chunking: { strategy: "recursive", chunkSize: 4_000, chunkOverlap: 800 },
+        extraction: { concurrency: 8, accuracy: "medium", requireExamples: true },
+        canonicalization: {
+          topK: 5,
+          autoMatchThreshold: 0.92,
+          autoNewThreshold: 0.6,
+          useLlmForAmbiguous: true,
+        },
+        output: { supportCountThreshold: 1 },
       },
     });
   });
@@ -130,6 +143,107 @@ describe("web application API", () => {
     });
   });
 
+  it("passes per-job extractor settings and prompt overrides to ontology jobs", async () => {
+    let request!: Parameters<LlmAdapter["generateStructured"]>[0];
+    const capturingLlm: LlmAdapter = {
+      async generateStructured<T>(nextRequest: Parameters<LlmAdapter["generateStructured"]>[0]): Promise<T> {
+        request = nextRequest;
+        return { candidates: [] } as T;
+      },
+    };
+    app = await createWebApp({
+      config,
+      adapters: { ...adapters, llm: capturingLlm },
+    });
+    const upload = createMultipart([
+      { filename: "architecture.md", mimeType: "text/markdown", text: "service database api" },
+    ], {
+      settings: JSON.stringify({
+        chunking: { chunkSize: 64, chunkOverlap: 0 },
+        extraction: {
+          accuracy: "low",
+          concurrency: 1,
+          requireExamples: false,
+          systemPrompt: "Custom extraction system prompt",
+          prompt: "Custom extraction prompt",
+        },
+        output: { supportCountThreshold: 1 },
+      }),
+    });
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/jobs",
+      headers: { "content-type": upload.contentType },
+      payload: upload.payload,
+    });
+    const id = created.json<{ id: string }>().id;
+    await waitForTerminalJob(app, id);
+
+    expect(created.statusCode).toBe(202);
+    expect(request.system).toBe("Custom extraction system prompt");
+    expect(request.prompt).toBe("Custom extraction prompt");
+    expect(request.schema).toMatchObject({
+      properties: { candidates: { maxItems: 12 } },
+    });
+  });
+
+  it("rejects invalid per-job extractor settings", async () => {
+    app = await createWebApp({ config, adapters });
+    const upload = createMultipart([
+      { filename: "architecture.md", mimeType: "text/markdown", text: "service database api" },
+    ], {
+      settings: JSON.stringify({
+        chunking: { chunkSize: 100, chunkOverlap: 100 },
+      }),
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/jobs",
+      headers: { "content-type": upload.contentType },
+      payload: upload.payload,
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ error: string }>().error).toContain("chunkOverlap");
+  });
+
+  it("converts uploaded PDF files to Markdown before extraction", async () => {
+    let request!: Parameters<LlmAdapter["generateStructured"]>[0];
+    const capturingLlm: LlmAdapter = {
+      async generateStructured<T>(nextRequest: Parameters<LlmAdapter["generateStructured"]>[0]): Promise<T> {
+        request = nextRequest;
+        return { candidates: [] } as T;
+      },
+    };
+    app = await createWebApp({
+      config,
+      adapters: { ...adapters, llm: capturingLlm },
+    });
+    const upload = createMultipart([
+      {
+        filename: "architecture.pdf",
+        mimeType: "application/pdf",
+        content: createSimplePdf("The billing service exposes an API."),
+      },
+    ]);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/jobs",
+      headers: { "content-type": upload.contentType },
+      payload: upload.payload,
+    });
+    const id = created.json<{ id: string }>().id;
+    await waitForTerminalJob(app, id);
+
+    expect(created.statusCode).toBe(202);
+    expect(request.prompt).toContain("# architecture.pdf converted from PDF");
+    expect(request.prompt).toContain("## Page 1");
+    expect(request.prompt).toContain("billing service exposes an API");
+  });
+
   it("passes custom canonicalization prompts to ambiguous ontology judgments", async () => {
     let extractionIndex = 0;
     let canonicalizationRequest!: Parameters<LlmAdapter["generateStructured"]>[0];
@@ -189,7 +303,7 @@ describe("web application API", () => {
   it("rejects unsupported, duplicate, and missing documents", async () => {
     app = await createWebApp({ config, adapters });
     const unsupported = createMultipart([
-      { filename: "document.pdf", mimeType: "application/pdf", text: "%PDF" },
+      { filename: "document.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", text: "zip" },
     ]);
     const duplicate = createMultipart([
       { filename: "same.md", mimeType: "text/markdown", text: "service" },
@@ -258,6 +372,35 @@ describe("web application API", () => {
     expect(cancelled.statusCode).toBe(202);
     expect(status.status).toBe("cancelled");
   });
+
+  it("returns an actionable Azure networking error when the provider is blocked by VNet rules", async () => {
+    const blockedLlm: LlmAdapter = {
+      async generateStructured<T>(): Promise<T> {
+        throw new Error(
+          "403 A Virtual Network is configured for this resource. Please use the correct endpoint for making requests. Check https://aka.ms/cogsvc-vnet for more details.",
+        );
+      },
+    };
+    app = await createWebApp({
+      config,
+      adapters: { ...adapters, llm: blockedLlm },
+    });
+    const upload = createMultipart([
+      { filename: "architecture.md", mimeType: "text/markdown", text: "service database api" },
+    ]);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/jobs",
+      headers: { "content-type": upload.contentType },
+      payload: upload.payload,
+    });
+    const id = created.json<{ id: string }>().id;
+    const status = await waitForTerminalJob(app, id) as { status: string; error?: string };
+
+    expect(status.status).toBe("error");
+    expect(status.error).toContain("restricted to a Virtual Network");
+  });
 });
 
 describe("web runtime config", () => {
@@ -273,23 +416,58 @@ describe("web runtime config", () => {
 interface UploadFile {
   filename: string;
   mimeType: string;
-  text: string;
+  text?: string;
+  content?: Buffer;
 }
 
 /** Builds a small deterministic multipart body without adding a test-only runtime dependency. */
-function createMultipart(files: UploadFile[]): { contentType: string; payload: Buffer } {
+function createMultipart(files: UploadFile[], fields: Record<string, string> = {}): { contentType: string; payload: Buffer } {
   const boundary = "ontology-test-boundary";
+  const fieldChunks = Object.entries(fields).map(([name, value]) => [
+    `--${boundary}\r\n`,
+    `Content-Disposition: form-data; name="${name}"\r\n\r\n`,
+    value,
+    "\r\n",
+  ]);
   const chunks = files.map((file) => [
     `--${boundary}\r\n`,
     `Content-Disposition: form-data; name="documents"; filename="${file.filename}"\r\n`,
     `Content-Type: ${file.mimeType}\r\n\r\n`,
-    file.text,
+    file.content ?? file.text ?? "",
     "\r\n",
-  ].join(""));
+  ]);
   return {
     contentType: `multipart/form-data; boundary=${boundary}`,
-    payload: Buffer.from(`${chunks.join("")}--${boundary}--\r\n`, "utf8"),
+    payload: Buffer.concat([
+      ...fieldChunks.flatMap((chunk) => chunk.map((part) => Buffer.from(part, "utf8"))),
+      ...chunks.flatMap((chunk) => chunk.map((part) => typeof part === "string" ? Buffer.from(part, "utf8") : part)),
+      Buffer.from(`--${boundary}--\r\n`, "utf8"),
+    ]),
   };
+}
+
+/** Builds a tiny one-page text PDF with deterministic xref offsets for upload tests. */
+function createSimplePdf(text: string): Buffer {
+  const escapedText = text.replaceAll("\\", "\\\\").replaceAll("(", "\\(").replaceAll(")", "\\)");
+  const objects = [
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+    "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
+    "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+    `5 0 obj\n<< /Length ${escapedText.length + 35} >>\nstream\nBT /F1 18 Tf 72 720 Td (${escapedText}) Tj ET\nendstream\nendobj\n`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  for (const object of objects) {
+    offsets.push(Buffer.byteLength(pdf, "binary"));
+    pdf += object;
+  }
+  const xrefOffset = Buffer.byteLength(pdf, "binary");
+  pdf += `xref\n0 ${objects.length + 1}\n`;
+  pdf += "0000000000 65535 f \n";
+  pdf += offsets.slice(1).map((offset) => `${offset.toString().padStart(10, "0")} 00000 n \n`).join("");
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  return Buffer.from(pdf, "binary");
 }
 
 /** Yields to asynchronous extraction until a terminal API state is observable. */

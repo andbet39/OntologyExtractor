@@ -68,7 +68,7 @@ function createLmStudioAdapters(environment: NodeJS.ProcessEnv): ProviderAdapter
     configuration: { baseURL },
   });
   return {
-    llm: new LangChainLlmAdapter(chat),
+    llm: new LangChainLlmAdapter(chat, { structuredOutputMethod: "jsonMode" }),
     embeddings: new LangChainEmbeddingAdapter(embeddings, dimensions),
     summary: { provider: "lmstudio", chatModel, embeddingModel },
   };

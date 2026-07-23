@@ -9,6 +9,10 @@ import {
   type Ontology,
 } from "ontology-extractor";
 
+import {
+  convertDocumentToMarkdown,
+  supportedDocumentExtensions,
+} from "./document-conversion.js";
 import { evaluateOntology } from "./evaluation.js";
 import {
   createProviderAdapters,
@@ -16,7 +20,6 @@ import {
 } from "./providers.js";
 import { renderReport } from "./report.js";
 
-const allowedExtensions = new Set([".txt", ".md", ".html", ".htm"]);
 const maximumDocumentBytes = 2 * 1024 * 1024;
 
 /** Runs the sample CLI and writes ontology, run metadata, and an HTML report. */
@@ -131,7 +134,7 @@ function readProvider(value: string): ProviderName {
 async function loadDocuments(directory: string): Promise<InputDocument[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const fileNames = entries
-    .filter((entry) => entry.isFile() && allowedExtensions.has(extname(entry.name).toLowerCase()))
+    .filter((entry) => entry.isFile() && supportedDocumentExtensions.has(extname(entry.name).toLowerCase()))
     .map(({ name }) => name)
     .sort((left, right) => left.localeCompare(right));
   if (fileNames.length === 0) {
@@ -143,7 +146,7 @@ async function loadDocuments(directory: string): Promise<InputDocument[]> {
     if (content.byteLength > maximumDocumentBytes) {
       throw new Error(`Document exceeds 2 MiB limit: ${fileName}`);
     }
-    return { id: basename(fileName), text: content.toString("utf8") };
+    return { id: basename(fileName), text: await convertDocumentToMarkdown(fileName, content) };
   }));
 }
 

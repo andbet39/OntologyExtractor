@@ -10,13 +10,21 @@ import type {
   LlmAdapter,
 } from "../types.js";
 
+export type LangChainStructuredOutputMethod = "jsonSchema" | "functionCalling" | "jsonMode";
+
+export interface LangChainLlmAdapterOptions {
+  structuredOutputMethod?: LangChainStructuredOutputMethod;
+}
+
 /** Adapts a LangChain chat model supporting structured output to the core port. */
 export class LangChainLlmAdapter implements LlmAdapter {
   readonly #model: BaseChatModel;
+  readonly #structuredOutputMethod: LangChainStructuredOutputMethod | undefined;
 
   /** Creates an adapter without importing a concrete model provider. */
-  constructor(model: BaseChatModel) {
+  constructor(model: BaseChatModel, options: LangChainLlmAdapterOptions = {}) {
     this.#model = model;
+    this.#structuredOutputMethod = options.structuredOutputMethod;
   }
 
   /** Invokes LangChain structured output while preserving schema and cancellation. */
@@ -29,18 +37,31 @@ export class LangChainLlmAdapter implements LlmAdapter {
     request.signal?.throwIfAborted();
     const runnable = this.#model.withStructuredOutput<Record<string, unknown>>(request.schema, {
       name: "ontology_extractor_output",
+      ...(this.#structuredOutputMethod === undefined ? {} : { method: this.#structuredOutputMethod }),
     });
     const messages = [
       ...(request.system === undefined
         ? []
         : [new SystemMessage(request.system)]),
-      new HumanMessage(request.prompt),
+      new HumanMessage(this.#createPrompt(request.prompt, request.schema)),
     ];
     const result = await runnable.invoke(
       messages,
       request.signal === undefined ? {} : { signal: request.signal },
     );
     return result as T;
+  }
+
+  /** Adds schema guidance when a provider only supports JSON mode structured output. */
+  #createPrompt(prompt: string, schema: JsonSchema): string {
+    if (this.#structuredOutputMethod !== "jsonMode") {
+      return prompt;
+    }
+    return [
+      prompt,
+      "Return only a valid JSON object that matches this JSON Schema.",
+      JSON.stringify(schema),
+    ].join("\n\n");
   }
 }
 

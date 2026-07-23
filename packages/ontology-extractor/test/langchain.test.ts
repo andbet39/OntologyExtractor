@@ -37,6 +37,36 @@ describe("LangChainLlmAdapter", () => {
     expect(messages?.[1]).toBeInstanceOf(HumanMessage);
     expect(config).toEqual({ signal: controller.signal });
   });
+
+  it("can force JSON mode and includes schema guidance for local OpenAI-compatible providers", async () => {
+    const invoke = vi.fn(
+      async (_messages: unknown[], _config: { signal?: AbortSignal }) => ({
+        candidates: [],
+      }),
+    );
+    const withStructuredOutput = vi.fn(() => ({ invoke }));
+    const model = { withStructuredOutput };
+    const adapter = new LangChainLlmAdapter(model as never, { structuredOutputMethod: "jsonMode" });
+    const schema = { type: "object", properties: { candidates: { type: "array" } } };
+
+    await adapter.generateStructured({
+      prompt: "document fragment",
+      schema,
+    });
+
+    expect(withStructuredOutput).toHaveBeenCalledWith(schema, {
+      name: "ontology_extractor_output",
+      method: "jsonMode",
+    });
+    const [messages] = invoke.mock.calls[0] ?? [];
+    const [message] = messages as HumanMessage[];
+    if (message === undefined) {
+      throw new Error("Expected LangChain prompt message");
+    }
+    expect(message).toBeInstanceOf(HumanMessage);
+    expect(String(message.content)).toContain("Return only a valid JSON object");
+    expect(String(message.content)).toContain(JSON.stringify(schema));
+  });
 });
 
 describe("LangChainEmbeddingAdapter", () => {

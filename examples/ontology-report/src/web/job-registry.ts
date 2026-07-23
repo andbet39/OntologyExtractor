@@ -24,6 +24,32 @@ export interface WebJobSnapshot {
   error?: string;
 }
 
+export interface WebExtractorSettings {
+  chunking?: {
+    strategy?: "recursive" | "markdown" | "html";
+    chunkSize?: number;
+    chunkOverlap?: number;
+  };
+  extraction?: {
+    concurrency?: number;
+    accuracy?: ExtractionAccuracy;
+    requireExamples?: boolean;
+    systemPrompt?: string;
+    prompt?: string;
+  };
+  canonicalization?: {
+    topK?: number;
+    autoMatchThreshold?: number;
+    autoNewThreshold?: number;
+    useLlmForAmbiguous?: boolean;
+    systemPrompt?: string;
+    prompt?: string;
+  };
+  output?: {
+    supportCountThreshold?: number;
+  };
+}
+
 export type JobEvent =
   | { type: "progress"; data: WebJobSnapshot }
   | { type: "done"; data: { id: string } }
@@ -69,28 +95,35 @@ export class JobRegistry {
   }
 
   /** Starts one isolated extractor and returns its externally safe snapshot. */
-  start(documents: InputDocument[]): WebJobSnapshot {
+  start(documents: InputDocument[], settings: WebExtractorSettings = {}): WebJobSnapshot {
     if (this.activeCount >= this.#options.maxActiveJobs) {
       throw new TooManyJobsError("The server is already processing the maximum number of jobs");
     }
     const extractor = new OntologyExtractor({
       llm: this.#options.adapters.llm,
       embeddings: this.#options.adapters.embeddings,
+      ...(settings.chunking === undefined ? {} : { chunking: settings.chunking }),
       extraction: {
-        accuracy: this.#options.extractionAccuracy,
-        systemPrompt: createWebExtractionSystemPrompt(),
-        prompt: (chunk) => JSON.stringify({
+        accuracy: settings.extraction?.accuracy ?? this.#options.extractionAccuracy,
+        ...(settings.extraction?.concurrency === undefined ? {} : { concurrency: settings.extraction.concurrency }),
+        systemPrompt: settings.extraction?.systemPrompt ?? createWebExtractionSystemPrompt(),
+        prompt: settings.extraction?.prompt ?? ((chunk) => JSON.stringify({
           documentId: chunk.documentId,
           chunkIndex: chunk.chunkIndex,
           instruction: "Extract only certain ontology entities that are explicitly supported and central to the main subject of this document fragment.",
           text: chunk.text,
-        }),
+        })),
+        ...(settings.extraction?.requireExamples === undefined ? {} : { requireExamples: settings.extraction.requireExamples }),
       },
       canonicalization: {
-        systemPrompt: createWebCanonicalizationSystemPrompt(),
-        prompt: ({ candidate, neighbors }) => createWebCanonicalizationPrompt(candidate, neighbors),
+        ...(settings.canonicalization?.topK === undefined ? {} : { topK: settings.canonicalization.topK }),
+        ...(settings.canonicalization?.autoMatchThreshold === undefined ? {} : { autoMatchThreshold: settings.canonicalization.autoMatchThreshold }),
+        ...(settings.canonicalization?.autoNewThreshold === undefined ? {} : { autoNewThreshold: settings.canonicalization.autoNewThreshold }),
+        ...(settings.canonicalization?.useLlmForAmbiguous === undefined ? {} : { useLlmForAmbiguous: settings.canonicalization.useLlmForAmbiguous }),
+        systemPrompt: settings.canonicalization?.systemPrompt ?? createWebCanonicalizationSystemPrompt(),
+        prompt: settings.canonicalization?.prompt ?? (({ candidate, neighbors }) => createWebCanonicalizationPrompt(candidate, neighbors)),
       },
-      output: { supportCountThreshold: this.#options.supportCountThreshold },
+      output: { supportCountThreshold: settings.output?.supportCountThreshold ?? this.#options.supportCountThreshold },
     });
     const job = extractor.extract(documents);
     const timestamp = this.#now();
@@ -257,9 +290,31 @@ function toSnapshot(id: string, record: JobRecord): WebJobSnapshot {
 
 /** Prevents provider stack traces and arbitrary thrown values from reaching clients. */
 function safeErrorMessage(error: unknown): string {
-  return error instanceof Error && error.name === "CancelledError"
-    ? "Extraction cancelled"
-    : "Ontology extraction failed";
+  if (error instanceof Error && error.name === "CancelledError") {
+    return "Extraction cancelled";
+  }
+  const providerMessage = findProviderErrorMessage(error);
+  if (providerMessage?.includes("Virtual Network") === true || providerMessage?.includes("cogsvc-vnet") === true) {
+    return "Azure OpenAI rejected the request because the resource is restricted to a Virtual Network. Connect from the allowed network or update the Azure OpenAI networking settings.";
+  }
+  return "Ontology extraction failed";
+}
+
+/** Extracts bounded provider error text without exposing stack traces or credentials. */
+function findProviderErrorMessage(error: unknown): string | undefined {
+  let current = error;
+  const messages: string[] = [];
+  for (let depth = 0; depth < 4; depth += 1) {
+    if (!(current instanceof Error)) {
+      break;
+    }
+    if (current.message.length > 0) {
+      messages.push(current.message);
+    }
+    current = current.cause;
+  }
+  const message = messages.join(" ").slice(0, 500);
+  return message.length === 0 ? undefined : message;
 }
 
 /** Creates a detached ontology result for each API consumer. */

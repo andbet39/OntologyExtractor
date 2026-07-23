@@ -18,7 +18,8 @@
     "@langchain/openai": "1.5.5",
     "cytoscape": "^3.34.0",
     "fastify": "^5.10.0",
-    "ontology-extractor": "workspace:*"
+    "ontology-extractor": "workspace:*",
+    "pdfjs-dist": "^6.1.200"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
